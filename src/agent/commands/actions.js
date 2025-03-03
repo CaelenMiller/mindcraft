@@ -33,10 +33,8 @@ export const actionsList = [
         },
         perform: async function (agent, prompt) {
             // just ignore prompt - it is now in context in chat history
-            if (!settings.allow_insecure_coding) { 
-                agent.openChat('newAction is disabled. Enable with allow_insecure_coding=true in settings.js');
+            if (!settings.allow_insecure_coding)
                 return 'newAction not allowed! Code writing is disabled in settings. Notify the user.';
-             }
             return await agent.coder.generateCode(agent.history);
         }
     },
@@ -49,7 +47,7 @@ export const actionsList = [
             agent.actions.cancelResume();
             agent.bot.emit('idle');
             let msg = 'Agent stopped.';
-            if (agent.self_prompter.isActive())
+            if (agent.self_prompter.on)
                 msg += ' Self-prompting still active.';
             return msg;
         }
@@ -362,7 +360,8 @@ export const actionsList = [
         },
         perform: async function (agent, prompt) {
             if (convoManager.inConversation()) {
-                agent.self_prompter.setPromptPaused(prompt);
+                agent.self_prompter.setPrompt(prompt);
+                convoManager.scheduleSelfPrompter();
             }
             else {
                 agent.self_prompter.start(prompt);
@@ -374,6 +373,7 @@ export const actionsList = [
         description: 'Call when you have accomplished your goal. It will stop self-prompting and the current action. ',
         perform: async function (agent) {
             agent.self_prompter.stop();
+            convoManager.cancelSelfPrompter();
             return 'Self-prompting stopped.';
         }
     },

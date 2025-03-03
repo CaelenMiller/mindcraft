@@ -1,5 +1,5 @@
 import { cosineSimilarity } from './math.js';
-import { stringifyTurns, wordOverlapScore } from './text.js';
+import { stringifyTurns } from './text.js';
 
 export class Examples {
     constructor(model, select_num=2) {
@@ -16,6 +16,17 @@ export class Examples {
                 messages += turn.content.substring(turn.content.indexOf(':')+1).trim() + '\n';
         }
         return messages.trim();
+    }
+
+    getWords(text) {
+        return text.replace(/[^a-zA-Z ]/g, '').toLowerCase().split(' ');
+    }
+
+    wordOverlapScore(text1, text2) {
+        const words1 = this.getWords(text1);
+        const words2 = this.getWords(text2);
+        const intersection = words1.filter(word => words2.includes(word));
+        return intersection.length / (words1.length + words2.length - intersection.length);
     }
 
     async load(examples) {
@@ -38,7 +49,7 @@ export class Examples {
             // Wait for all embeddings to complete
             await Promise.all(embeddingPromises);
         } catch (err) {
-            console.warn('Error with embedding model, using word-overlap instead.');
+            console.warn('Error with embedding model, using word overlap instead:', err);
             this.model = null;
         }
     }
@@ -57,8 +68,8 @@ export class Examples {
         }
         else {
             this.examples.sort((a, b) => 
-                wordOverlapScore(turn_text, this.turnsToText(b)) -
-                wordOverlapScore(turn_text, this.turnsToText(a))
+                this.wordOverlapScore(turn_text, this.turnsToText(b)) -
+                this.wordOverlapScore(turn_text, this.turnsToText(a))
             );
         }
         let selected = this.examples.slice(0, this.select_num);
