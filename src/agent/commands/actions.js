@@ -124,7 +124,7 @@ export const actionsList = [
     },
     {
         name: '!searchForEntity',
-        description: 'Find and go to the nearest entity of a given type in a given range.',
+        description: 'Find and go to the nearest entity (mob/player) of a given type in a given range.',
         params: {
             'type': { type: 'string', description: 'The type of entity to go to.' },
             'search_range': { type: 'float', description: 'The range to search for the entity.', domain: [32, 512] }
@@ -407,6 +407,16 @@ export const actionsList = [
             return `Converstaion with ${player_name} ended.`;
         }
     },
+    {
+        name: '!poiScan',
+        description: 'Check to see if there is are any interesting structures nearby',
+        params: {
+            'k': { type: 'int', description: 'size of scan radius' }
+        },
+        perform: runAsAction(async (agent) => {
+            await skills.checkForPOI(agent.bot);
+        })
+    }
     // { // commented for now, causes confusion with goal command
     //     name: '!npcGoal',
     //     description: 'Set a simple goal for an item or building to automatically work towards. Do not use for complex goals.',

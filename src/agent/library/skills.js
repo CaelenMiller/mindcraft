@@ -8,6 +8,27 @@ export function log(bot, message) {
     bot.output += message + '\n';
 }
 
+export async function checkForPOI(bot, k = 16) {
+    /**
+     * Check for multiple points of interest (POI) nearby.
+     * @param {MinecraftBot} bot - The bot to check surroundings for.
+     * @param {number} k - The search radius (default 16 blocks).
+     * @returns {Promise<string[]>} - A list of detected POIs, or an empty array if none found.
+     * @example
+     * let pois = await skills.checkForPOI(bot, 16);
+     * if (pois.length) console.log(`Detected POIs: ${pois.join(', ')}`);
+     */
+    
+    let pois = world.getPointsOfInterestNearby(bot, k);
+    if (pois.length > 0) {
+        log(bot, `Detected POIs: ${pois.join(', ')}`);
+        return pois;
+    }
+    log(bot, `No points of interest found nearby.`);
+    return [];
+}
+
+
 async function autoLight(bot) {
     if (world.shouldPlaceTorch(bot)) {
         try {

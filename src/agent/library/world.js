@@ -1,5 +1,36 @@
 import pf from 'mineflayer-pathfinder';
 import * as mc from '../../utils/mcdata.js';
+import { pointsOfInterest } from './poi_data.js';
+
+
+
+export function getPointOfInterestNearby(bot, k = 16) {
+    /**
+     * Scans for points of interest within 'k' blocks.
+     * @param {Bot} bot - The bot to check surroundings for.
+     * @param {number} k - The search radius (default 16 blocks).
+     * @returns {string | null} - The name of the detected point of interest, or null if none found.
+     */
+    
+    const nearbyBlocks = getNearestBlocks(bot, null, k);
+    const nearbyEntities = getNearbyEntities(bot, k);
+    
+    for (const poi of pointsOfInterest) {
+        let hasBlocks = poi.blocks.length === 0 || poi.blocks.some(blockPattern =>
+            nearbyBlocks.some(block => block.name.includes(blockPattern))
+        );
+        
+        let hasEntities = poi.entities.length === 0 || poi.entities.some(entityName => 
+            nearbyEntities.some(entity => entity.name === entityName)
+        );
+
+        if (hasBlocks && hasEntities) {
+            return poi.name; // Found a matching POI
+        }
+    }
+    
+    return null; // No POI detected
+}
 
 
 export function getNearestFreeSpace(bot, size=1, distance=8) {

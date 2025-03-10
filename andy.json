@@ -1,12 +1,12 @@
 {
     "name": "andy",
 
-    "model": "gpt-4o-mini",
+    "model": "gpt-4o-mini-2024-07-18",
     
     "modes": {
         "self_preservation": true,
         "unstuck": true,
-        "cowardice": true,
+        "cowardice": false,
         "self_defense": true,
         "hunting": true,
         "item_collecting": true,
