@@ -4,33 +4,118 @@ import { pointsOfInterest } from './poi_data.js';
 
 
 
-export function getPointOfInterestNearby(bot, k = 16) {
+export function getPointsOfInterestNearbyWithCenters(bot, k = 16) {
     /**
-     * Scans for points of interest within 'k' blocks.
+     * Scans for multiple points of interest within 'k' blocks and determines their center.
+     * Uses weighted block and entity matching.
      * @param {Bot} bot - The bot to check surroundings for.
      * @param {number} k - The search radius (default 16 blocks).
-     * @returns {string | null} - The name of the detected point of interest, or null if none found.
+     * @returns {Array<{ name: string, matchPercentage: number, center: { x: number, y: number, z: number } }> | null}
      */
-    
+
     const nearbyBlocks = getNearestBlocks(bot, null, k);
     const nearbyEntities = getNearbyEntities(bot, k);
-    
-    for (const poi of pointsOfInterest) {
-        let hasBlocks = poi.blocks.length === 0 || poi.blocks.some(blockPattern =>
-            nearbyBlocks.some(block => block.name.includes(blockPattern))
-        );
-        
-        let hasEntities = poi.entities.length === 0 || poi.entities.some(entityName => 
-            nearbyEntities.some(entity => entity.name === entityName)
-        );
 
-        if (hasBlocks && hasEntities) {
-            return poi.name; // Found a matching POI
+    const foundPOIs = [];
+
+    for (const poi of pointsOfInterest) {
+        let totalExpectedWeight = 0;
+        let totalMatchedWeight = 0;
+
+        // Map nearby blocks into a countable format with better name handling
+        let blockCounts = {};
+        nearbyBlocks.forEach(block => {
+            let blockName = block.name.toLowerCase(); // Ensure case-insensitive matching
+            if (blockName.includes("bed")) blockName = "_bed"; // Normalize bed detection
+            if (blockName.includes("door")) blockName = "_door"; // Normalize door detection
+            blockCounts[blockName] = (blockCounts[blockName] || 0) + 1;
+        });
+
+        // Count block matches based on their weights
+        poi.blocks.forEach(blockData => {
+            const { name, count: maxExpected } = blockData;
+            let foundCount = Math.min(blockCounts[name] || 0, maxExpected); // Limit to expected count
+            totalMatchedWeight += foundCount;
+            totalExpectedWeight += maxExpected;
+        });
+
+        // Map nearby entities into a countable format
+        let entityCounts = {};
+        nearbyEntities.forEach(entity => {
+            entityCounts[entity.name] = (entityCounts[entity.name] || 0) + 1;
+        });
+
+        // Count entity matches based on their weights
+        poi.entities.forEach(entityData => {
+            const { name, count: maxExpected } = entityData;
+            let foundCount = Math.min(entityCounts[name] || 0, maxExpected); // Limit to expected count
+            totalMatchedWeight += foundCount;
+            totalExpectedWeight += maxExpected;
+        });
+
+        // Compute weighted match percentage
+        let matchPercentage = totalExpectedWeight > 0 ? (totalMatchedWeight / totalExpectedWeight) * 100 : 0;
+
+        console.log(`Checking POI: ${poi.name}`);
+        console.log(`Total Expected Weight: ${totalExpectedWeight}`);
+        console.log(`Total Matched Weight: ${totalMatchedWeight}`);
+        console.log(`Match Percentage: ${matchPercentage.toFixed(2)}%`);
+
+        // Ensure only POIs above 50% match are returned
+        if (matchPercentage >= 50) {
+            let center = determineCenter(poi, nearbyBlocks);
+            foundPOIs.push({ name: poi.name, matchPercentage: matchPercentage.toFixed(2), center });
+            console.log(`✅ Found POI: ${poi.name} at ${JSON.stringify(center)} with ${matchPercentage.toFixed(2)}% match`);
+        } else {
+            console.log(`❌ Not enough matching blocks/entities for ${poi.name}`);
         }
     }
-    
-    return null; // No POI detected
+
+    return foundPOIs.length > 0 ? foundPOIs : null;
 }
+
+
+
+
+function determineCenter(poi, matchingBlocks) {
+    // List of special center blocks for specific POIs
+    const centerBlocks = {
+        "Village": "bell",
+        "Dungeon": "mob_spawner",
+        "Jungle Temple": "chiseled_stone_bricks",
+        "Woodland Mansion": "dark_oak_planks",
+        "Desert Temple": "blue_terracotta",
+        "Ruined Nether Portal": "crying_obsidian"
+    };
+
+    // Check if the POI has a predefined center block
+    if (centerBlocks[poi.name]) {
+        let centerBlock = matchingBlocks.find(block => block.name.includes(centerBlocks[poi.name]));
+        if (centerBlock) {
+            return { x: centerBlock.x, y: centerBlock.y, z: centerBlock.z };
+        }
+    }
+
+    // If no center block is found, estimate center from all blocks
+    if (matchingBlocks.length > 0) {
+        let sumX = 0, sumY = 0, sumZ = 0;
+        matchingBlocks.forEach(block => {
+            sumX += block.x;
+            sumY += block.y;
+            sumZ += block.z;
+        });
+
+        let avgX = Math.round(sumX / matchingBlocks.length);
+        let avgY = Math.round(sumY / matchingBlocks.length);
+        let avgZ = Math.round(sumZ / matchingBlocks.length);
+
+        return { x: avgX, y: avgY, z: avgZ };
+    }
+
+    return null; // No valid blocks found
+}
+
+
 
 
 export function getNearestFreeSpace(bot, size=1, distance=8) {

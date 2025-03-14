@@ -10,23 +10,33 @@ export function log(bot, message) {
 
 export async function checkForPOI(bot, k = 16) {
     /**
-     * Check for multiple points of interest (POI) nearby.
+     * Check for multiple points of interest (POI) nearby and log their centers.
      * @param {MinecraftBot} bot - The bot to check surroundings for.
      * @param {number} k - The search radius (default 16 blocks).
-     * @returns {Promise<string[]>} - A list of detected POIs, or an empty array if none found.
+     * @returns {Promise<Array<{name: string, center: {x: number, y: number, z: number}}>>} - List of detected POIs with centers, or an empty array.
      * @example
      * let pois = await skills.checkForPOI(bot, 16);
-     * if (pois.length) console.log(`Detected POIs: ${pois.join(', ')}`);
+     * if (pois.length) console.log(`Detected POIs: ${pois.map(p => p.name).join(', ')}`);
      */
-    
-    let pois = world.getPointsOfInterestNearby(bot, k);
-    if (pois.length > 0) {
-        log(bot, `Detected POIs: ${pois.join(', ')}`);
-        return pois;
+
+    try {
+        let pois = world.getPointsOfInterestNearbyWithCenters(bot, k);
+
+        if (pois && pois.length > 0) {
+            pois.forEach(poi => {
+                log(bot, `Detected POI: ${poi.name} at (${poi.center.x}, ${poi.center.y}, ${poi.center.z})`);
+            });
+            return pois;
+        }
+
+        log(bot, `No points of interest found nearby.`);
+        return [];
+    } catch (error) {
+        log(bot, `Error detecting POIs: ${error.message}`);
+        return [];
     }
-    log(bot, `No points of interest found nearby.`);
-    return [];
 }
+
 
 
 async function autoLight(bot) {

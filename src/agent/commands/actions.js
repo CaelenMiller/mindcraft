@@ -124,7 +124,7 @@ export const actionsList = [
     },
     {
         name: '!searchForEntity',
-        description: 'Find and go to the nearest entity (mob/player) of a given type in a given range.',
+        description: 'Find and go to the nearest entity (monster/animal/player, not structure) of a given type in a given range.',
         params: {
             'type': { type: 'string', description: 'The type of entity to go to.' },
             'search_range': { type: 'float', description: 'The range to search for the entity.', domain: [32, 512] }
@@ -408,8 +408,8 @@ export const actionsList = [
         }
     },
     {
-        name: '!poiScan',
-        description: 'Check to see if there is are any interesting structures nearby',
+        name: '!structureScan',
+        description: 'Check to see if there are any interesting structures nearby',
         params: {
             'k': { type: 'int', description: 'size of scan radius' }
         },
