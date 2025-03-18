@@ -408,6 +408,14 @@ export const actionsList = [
         }
     },
     {
+        name: '!digDown',
+        description: 'Digs down a specified distance.',
+        params: {'distance': { type: 'int', description: 'Distance to dig down'}},
+        perform: runAsAction(async (agent, distance) => {
+            await skills.digDown(agent.bot, distance)
+        })
+    },
+    {
         name: '!structureScan',
         description: 'Check to see if there are any interesting structures nearby',
         params: {
