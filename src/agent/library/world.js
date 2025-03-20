@@ -13,7 +13,21 @@ export function getPointsOfInterestNearbyWithCenters(bot, k = 16) {
      * @returns {Array<{ name: string, matchPercentage: number, center: { x: number, y: number, z: number } }> | null}
      */
 
-    const nearbyBlocks = getNearestBlocks(bot, null, k);
+    function getBlocksWithPositions(bot, distance) {
+        // Retrieves blocks with proper { x, y, z } positions
+        let blockPositions = bot.findBlocks({
+            matching: () => true, // Find all blocks
+            maxDistance: distance,
+            count: 10000
+        });
+
+        return blockPositions.map(pos => {
+            let block = bot.blockAt(pos);
+            return block ? { name: block.name, x: pos.x, y: pos.y, z: pos.z } : null;
+        }).filter(block => block !== null);
+    }
+
+    const nearbyBlocks = getBlocksWithPositions(bot, k);
     const nearbyEntities = getNearbyEntities(bot, k);
 
     const foundPOIs = [];
@@ -63,6 +77,7 @@ export function getPointsOfInterestNearbyWithCenters(bot, k = 16) {
 
         // Ensure only POIs above 50% match are returned
         if (matchPercentage >= 50) {
+            console.log(`Finding center for ${poi.name}`);
             let center = determineCenter(poi, nearbyBlocks);
             foundPOIs.push({ name: poi.name, matchPercentage: matchPercentage.toFixed(2), center });
             console.log(`✅ Found POI: ${poi.name} at ${JSON.stringify(center)} with ${matchPercentage.toFixed(2)}% match`);
@@ -75,45 +90,52 @@ export function getPointsOfInterestNearbyWithCenters(bot, k = 16) {
 }
 
 
-
-
 function determineCenter(poi, matchingBlocks) {
-    // List of special center blocks for specific POIs
-    const centerBlocks = {
-        "Village": "bell",
-        "Dungeon": "mob_spawner",
-        "Jungle Temple": "chiseled_stone_bricks",
-        "Woodland Mansion": "dark_oak_planks",
-        "Desert Temple": "blue_terracotta",
-        "Ruined Nether Portal": "crying_obsidian"
-    };
+    if (!poi || !matchingBlocks || matchingBlocks.length === 0) {
+        console.warn(`⚠️ Invalid POI or no matching blocks found.`);
+        return { x: 0, y: 0, z: 0 }; // Default fallback to prevent undefined
+    }
 
-    // Check if the POI has a predefined center block
-    if (centerBlocks[poi.name]) {
-        let centerBlock = matchingBlocks.find(block => block.name.includes(centerBlocks[poi.name]));
+    console.log(`🔍 Finding center for ${poi.name}`);
+    console.log("🔎 Checking blocks:", matchingBlocks.map(b => `${b.name} (${b.x}, ${b.y}, ${b.z})`));
+
+    // Retrieve center block dynamically from POI
+    const centerBlockName = poi.centerBlock;
+
+    if (centerBlockName) {
+        console.log(`🔍 Searching for center block: ${centerBlockName}`);
+        
+        let centerBlock = matchingBlocks.find(block => {
+            console.log(`Checking block: ${block.name} at (${block.x}, ${block.y}, ${block.z})`);
+            return block.name && block.name.toLowerCase().includes(centerBlockName.toLowerCase());
+        });
+
         if (centerBlock) {
+            console.log(`✅ Found center block ${centerBlock.name} at (${centerBlock.x}, ${centerBlock.y}, ${centerBlock.z})`);
             return { x: centerBlock.x, y: centerBlock.y, z: centerBlock.z };
+        } else {
+            console.warn(`⚠️ No specific center block found for ${poi.name}, defaulting to average position.`);
         }
+    } else {
+        console.warn(`⚠️ No centerBlock specified for ${poi.name}, using fallback method.`);
     }
 
     // If no center block is found, estimate center from all blocks
-    if (matchingBlocks.length > 0) {
-        let sumX = 0, sumY = 0, sumZ = 0;
-        matchingBlocks.forEach(block => {
-            sumX += block.x;
-            sumY += block.y;
-            sumZ += block.z;
-        });
+    let sumX = 0, sumY = 0, sumZ = 0;
+    matchingBlocks.forEach(block => {
+        sumX += block.x;
+        sumY += block.y;
+        sumZ += block.z;
+    });
 
-        let avgX = Math.round(sumX / matchingBlocks.length);
-        let avgY = Math.round(sumY / matchingBlocks.length);
-        let avgZ = Math.round(sumZ / matchingBlocks.length);
+    let avgX = Math.round(sumX / matchingBlocks.length);
+    let avgY = Math.round(sumY / matchingBlocks.length);
+    let avgZ = Math.round(sumZ / matchingBlocks.length);
 
-        return { x: avgX, y: avgY, z: avgZ };
-    }
-
-    return null; // No valid blocks found
+    console.log(`📍 Fallback center at (${avgX}, ${avgY}, ${avgZ})`);
+    return { x: avgX, y: avgY, z: avgZ };
 }
+
 
 
 
